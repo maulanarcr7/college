@@ -3,12 +3,10 @@ import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 
 void main() {
-  runApp(const MyApp());
+  runApp(MyApp());
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({Key? key}) : super(key: key);
-
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -16,14 +14,12 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
-      home: const HomePage(),
+      home: HomePage(),
     );
   }
 }
 
 class HomePage extends StatefulWidget {
-  const HomePage({Key? key}) : super(key: key);
-
   @override
   _HomePageState createState() => _HomePageState();
 }
@@ -35,25 +31,33 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
+    _initSqflite();
+  }
+
+  void _initSqflite() async {
+    final databasesPath = await getDatabasesPath();
+    final path = join(databasesPath, 'college.db');
+    _database = await openDatabase(
+      path,
+      version: 1,
+      onCreate: _onDatabaseCreate,
+    );
+    await _database?.execute('PRAGMA foreign_keys = ON');
     openDatabaseAndLoadData();
   }
 
+  Future<void> _onDatabaseCreate(Database db, int version) async {
+    await db.execute('CREATE TABLE IF NOT EXISTS students ('
+        'id INTEGER PRIMARY KEY AUTOINCREMENT,'
+        'name TEXT,'
+        'gender TEXT,'
+        'phone_number TEXT'
+        ')');
+  }
+
   Future<void> openDatabaseAndLoadData() async {
-    _database = await openDatabase(
-      join(await getDatabasesPath(), 'db_college.db'),
-      version: 1,
-      onCreate: (db, version) {
-        return db.execute('CREATE TABLE data_mhs ('
-            'id INTEGER PRIMARY KEY AUTOINCREMENT, '
-            'name TEXT, '
-            'gender TEXT, '
-            'phone_number TEXT'
-            ')');
-      },
-    );
-
-    _data = await _database!.rawQuery('SELECT * FROM data_mhs');
-
+    if (_database == null) return;
+    _data = await _database!.rawQuery('SELECT * FROM students');
     setState(() {});
   }
 
@@ -61,7 +65,7 @@ class _HomePageState extends State<HomePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Home'),
+        title: Text('Home'),
       ),
       body: Center(
         child: _data.isNotEmpty
@@ -79,15 +83,15 @@ class _HomePageState extends State<HomePage> {
                     return DataRow(
                       cells: [
                         DataCell(Text(item['id'].toString())),
-                        DataCell(Text(item['name'].toString())),
-                        DataCell(Text(item['gender'].toString())),
-                        DataCell(Text(item['phone_number'].toString())),
+                        DataCell(Text(item['name'])),
+                        DataCell(Text(item['gender'])),
+                        DataCell(Text(item['phone_number'])),
                       ],
                     );
                   },
                 ),
               )
-            : const CircularProgressIndicator(),
+            : CircularProgressIndicator(),
       ),
     );
   }

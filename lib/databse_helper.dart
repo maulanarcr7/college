@@ -17,12 +17,12 @@ class DatabaseHelper {
   }
 
   Future<Database> _initDatabase() async {
-    final String path = join(await getDatabasesPath(), 'db_college.db');
+    final String path = join(await getDatabasesPath(), 'college.db');
     return openDatabase(path, version: 1, onCreate: _createDatabase);
   }
 
   Future<void> _createDatabase(Database db, int version) async {
-    await db.execute('CREATE TABLE data_mhs ('
+    await db.execute('CREATE TABLE students ('
         'id INTEGER PRIMARY KEY AUTOINCREMENT, '
         'name TEXT, '
         'gender TEXT, '
@@ -30,20 +30,20 @@ class DatabaseHelper {
         ')');
   }
 
-  Future<List<Map<String, dynamic>>> getdata_mhs() async {
+  Future<List<Map<String, dynamic>>> getStudents() async {
     final Database db = await database;
-    return db.query('data_mhs');
+    return db.query('students');
   }
 
   Future<int> insertStudent(Map<String, dynamic> student) async {
     final Database db = await database;
-    return db.insert('data_mhs', student);
+    return db.insert('students', student);
   }
 
   Future<int> updateStudent(Map<String, dynamic> student) async {
     final Database db = await database;
     return db.update(
-      'data_mhs',
+      'students',
       student,
       where: 'id = ?',
       whereArgs: [student['id']],
@@ -53,7 +53,7 @@ class DatabaseHelper {
   Future<int> deleteStudent(int id) async {
     final Database db = await database;
     return db.delete(
-      'data_mhs',
+      'students',
       where: 'id = ?',
       whereArgs: [id],
     );
