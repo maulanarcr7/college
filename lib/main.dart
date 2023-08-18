@@ -1,12 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
+import 'database_helper.dart';
 
-void main() {
-  runApp(MyApp());
+void main() async {
+  WidgetsFlutterBinding
+      .ensureInitialized(); // Ensure that Flutter is initialized
+  final databaseHelper = DatabaseHelper();
+  await databaseHelper.database; // Initialize the database
+
+  runApp(MyApp(databaseHelper: databaseHelper));
 }
 
 class MyApp extends StatelessWidget {
+  final DatabaseHelper databaseHelper;
+
+  const MyApp({required this.databaseHelper});
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -14,84 +24,53 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
-      home: HomePage(),
+      home: HomePage(databaseHelper: databaseHelper),
     );
   }
 }
 
 class HomePage extends StatefulWidget {
+  final DatabaseHelper databaseHelper;
+
+  const HomePage({required this.databaseHelper});
+
   @override
   _HomePageState createState() => _HomePageState();
 }
 
 class _HomePageState extends State<HomePage> {
-  Database? _database;
-  List<Map<String, dynamic>> _data = [];
+  List<Map<String, dynamic>> students = [];
 
   @override
   void initState() {
     super.initState();
-    _initSqflite();
+    loadData();
   }
 
-  void _initSqflite() async {
-    final databasesPath = await getDatabasesPath();
-    final path = join(databasesPath, 'college.db');
-    _database = await openDatabase(
-      path,
-      version: 1,
-      onCreate: _onDatabaseCreate,
-    );
-    await _database?.execute('PRAGMA foreign_keys = ON');
-    openDatabaseAndLoadData();
-  }
-
-  Future<void> _onDatabaseCreate(Database db, int version) async {
-    await db.execute('CREATE TABLE IF NOT EXISTS students ('
-        'id INTEGER PRIMARY KEY AUTOINCREMENT,'
-        'name TEXT,'
-        'gender TEXT,'
-        'phone_number TEXT'
-        ')');
-  }
-
-  Future<void> openDatabaseAndLoadData() async {
-    if (_database == null) return;
-    _data = await _database!.rawQuery('SELECT * FROM students');
-    setState(() {});
+  Future<void> loadData() async {
+    final allStudents = await widget.databaseHelper.getAllStudents();
+    setState(() {
+      students = allStudents;
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Home'),
+        title: Text('College App'),
       ),
-      body: Center(
-        child: _data.isNotEmpty
-            ? DataTable(
-                columns: const <DataColumn>[
-                  DataColumn(label: Text('No')),
-                  DataColumn(label: Text('Name')),
-                  DataColumn(label: Text('Gender')),
-                  DataColumn(label: Text('Phone Number')),
-                ],
-                rows: List<DataRow>.generate(
-                  _data.length,
-                  (index) {
-                    final item = _data[index];
-                    return DataRow(
-                      cells: [
-                        DataCell(Text(item['id'].toString())),
-                        DataCell(Text(item['name'])),
-                        DataCell(Text(item['gender'])),
-                        DataCell(Text(item['phone_number'])),
-                      ],
-                    );
-                  },
-                ),
-              )
-            : CircularProgressIndicator(),
+      body: ListView.builder(
+        itemCount: students.length,
+        itemBuilder: (context, index) {
+          final student = students[index];
+          return ListTile(
+            leading: Text(student['id'].toString()),
+            title: Text(student['name']),
+            subtitle: Text(student['gender']),
+            trailing: Text(student['phone']),
+          );
+        },
       ),
     );
   }
